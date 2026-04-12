@@ -1,4 +1,6 @@
 #include <vector>
+#include <list>
+#include <format>
 
 
 enum class OrderType {
@@ -18,7 +20,7 @@ using OrderId = std::uint64_t;
 struct LevelInfo {
   Price price_;
   Quantity quantity_;
-}
+};
 
 using LevelInfos = std::vector<LevelInfo>;
 
@@ -40,7 +42,7 @@ private:
 class Order {
 public:
   Order(OrderType orderType, OrderId orderId, Side side, Price price, Quantity quantity) 
-    : OrderType_ { orderType }, orderId_{ orderId }, side_{ side }, 
+    : orderType_ { orderType }, orderId_{ orderId }, side_{ side }, 
       price_{ price }, initialQuantity_{ quantity }, remainingQuantity_{ quantity } 
   {}
 
@@ -52,7 +54,9 @@ public:
   Quantity getFilledQuantity() const { return getInitialQuantity() - getRemainingQuantity(); }
   void fill(Quantity quantity) {
     if (quantity > getRemainingQuantity()) {
-      throw std::logic_error(std::format("Order ({}) cannot be filled for more than its remaining quantity,", getOrderId());
+      throw std::logic_error(
+        std::format("Order ({}) cannot be filled for more than its remaining quantity,", getOrderId())
+      );
     }
     remainingQuantity_ -= quantity;
   }
