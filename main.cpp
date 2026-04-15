@@ -157,7 +157,7 @@ private:
   Trades matchOrders() {
     Trades trades;
     trades.reserve(orders_.size()); // worst case, a trade can take all the
-                                       // orders of the orderbook
+                                    // orders of the orderbook
 
     while (true) {
       if (bids_.empty() || asks_.empty())
@@ -243,6 +243,7 @@ public:
     }
 
     orders_.insert({order->getOrderId(), OrderEntry{order, iterator}});
+    std::cout << "ORDERS ADDED" << std::endl;
     return matchOrders();
   }
 
@@ -250,7 +251,7 @@ public:
     if (!orders_.contains(orderId))
       return;
 
-    const auto &[order, iterator] = orders_.at(orderId);
+    const auto [order, iterator] = orders_.at(orderId);
     orders_.erase(orderId);
 
     if (order->getSide() == Side::Sell) {
@@ -311,7 +312,7 @@ int main() {
   std::cout << "Orderbook size after adding order: " << orderbook.size()
             << std::endl;
   orderbook.cancelOrder(orderId);
-  std::cout << "Orderbook size after canceling order: " << orderbook.size()
-            << std::endl;
+  // std::cout << "Orderbook size after canceling order: " << orderbook.size()
+  // << std::endl;
   return 0;
 }
