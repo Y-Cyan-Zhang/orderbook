@@ -243,7 +243,6 @@ public:
     }
 
     orders_.insert({order->getOrderId(), OrderEntry{order, iterator}});
-    std::cout << "ORDERS ADDED" << std::endl;
     return matchOrders();
   }
 
@@ -309,10 +308,8 @@ int main() {
   const OrderId orderId = 1;
   orderbook.addOrder(std::make_shared<Order>(OrderType::GoodTillCancel, orderId,
                                              Side::Buy, 100, 10));
-  std::cout << "Orderbook size after adding order: " << orderbook.size()
-            << std::endl;
+  std::cout << "Orderbook size after adding order: " << orderbook.size() << std::endl;
   orderbook.cancelOrder(orderId);
-  // std::cout << "Orderbook size after canceling order: " << orderbook.size()
-  // << std::endl;
+  std::cout << "Orderbook size after canceling order: " << orderbook.size() << std::endl;
   return 0;
 }
