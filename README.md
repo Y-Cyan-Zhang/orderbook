@@ -1,5 +1,7 @@
 ## Cross Platform Low-Latency High-Throughput Order Book
 
+TODO: replace header files with modules
+
 #### Order Book Interface
 
 

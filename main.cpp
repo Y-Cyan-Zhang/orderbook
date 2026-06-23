@@ -1,22 +1,25 @@
-#include <format>
 #include <iostream>
+#include <numeric>
+#include <vector>
+#include <format>
+#include <memory>
 #include <list>
 #include <map>
-#include <memory>
-#include <numeric>
 #include <unordered_map>
-#include <vector>
+
 
 enum class OrderType {
   GoodTillCancel,
-  FillOrKill,
-  // TODO: add ImmediateOrCancel
+  FillOrKill
 };
 
-enum class Side { Buy, Sell };
+enum class Side {
+  Buy,
+  Sell
+};
 
 using Price = std::int32_t;
-using Quantity = std::uint32_t;
+using Quantity = std::int32_t;
 using OrderId = std::uint64_t;
 
 struct LevelInfo {
@@ -26,13 +29,14 @@ struct LevelInfo {
 
 using LevelInfos = std::vector<LevelInfo>;
 
-class OrderBookLevelInfos {
+class OrderbookLevelInfos {
 public:
-  OrderBookLevelInfos(const LevelInfos &bids, const LevelInfos &asks)
-      : bids_{bids}, asks_{asks} {}
+  OrderbookLevelInfos(const LevelInfos& bids, const LevelInfos& asks)
+    : bids_{ bids }, asks_{ asks }
+  {}
 
-  const LevelInfos &getBids() const { return bids_; }
-  const LevelInfos &getAsks() const { return asks_; }
+  const LevelInfos& getBids() const { return bids_; }
+  const LevelInfos& getAsks() const { return asks_; }
 
 private:
   LevelInfos bids_;
@@ -41,27 +45,25 @@ private:
 
 class Order {
 public:
-  Order(OrderType orderType, OrderId orderId, Side side, Price price,
-        Quantity quantity)
-      : orderType_{orderType}, orderId_{orderId}, side_{side}, price_{price},
-        initialQuantity_{quantity}, remainingQuantity_{quantity} {}
+  Order(OrderType orderType, OrderId orderId, Side side, Price price, Quantity quantity)
+    : orderType_{ orderType }, orderId_{ orderId }, side_{ side }, price_{ price }, 
+      initialQuantity_{ quantity }, remainingQuantity_{ quantity }
+  {}
 
   OrderId getOrderId() const { return orderId_; }
-  OrderType getOrderType() const { return orderType_; }
   Side getSide() const { return side_; }
   Price getPrice() const { return price_; }
+  OrderType getOrderType() const { return orderType_; }
   Quantity getInitialQuantity() const { return initialQuantity_; }
   Quantity getRemainingQuantity() const { return remainingQuantity_; }
-  Quantity getFilledQuantity() const {
-    return getInitialQuantity() - getRemainingQuantity();
-  }
+  Quantity getFilledQuantity() const { return getInitialQuantity() - getRemainingQuantity(); }
   bool isFilled() const { return getRemainingQuantity() == 0; }
-  void fill(Quantity quantity) {
-    if (quantity > getRemainingQuantity()) {
-      throw std::logic_error(std::format(
-          "Order ({}) cannot be filled for more than its remaining quantity,",
-          getOrderId()));
-    }
+  void Fill(Quantity quantity) {
+    if (quantity > getRemainingQuantity())
+      throw std::logic_error(
+        std::format("Order ({}) cannot be filled for more than its remaining quantity.", getOrderId())
+      );
+
     remainingQuantity_ -= quantity;
   }
 
@@ -74,33 +76,36 @@ private:
   Quantity remainingQuantity_;
 };
 
-using OrderPointer = std::shared_ptr<Order>;
-using OrderPointers =
-    std::list<OrderPointer>; // using a list gives an iterator that won't be
-                             // invalidated as the list grows very large
-                             // TODO: optimize this away with a better data
-                             // structure, i.e. vector, once the project is
-                             // understood
+using OrderPointer = std::shared_ptr<Order>;  // using to allow reference semantics, 
+                                              // since on Order object can be stored in multiple data strcutures
+                                              // (e.g. in Orders dict, and bid/ask dict)
+
+using OrderPointers = std::list<OrderPointer>; // using a std::list since list iterators don't get invalidated as you insert/remove
+                                               // will be inserting/removing a lot
+                                               // TODO: can optimize this with a more efficient data structure, e.g. maybe a vector, more cache friendly
 
 class OrderModify {
+/* 
+ * Abstraction for an Order to be modified. 
+ * A modify will just be an order and cancel order.
+ */
 public:
   OrderModify(OrderId orderId, Side side, Price price, Quantity quantity)
-      : orderId_{orderId}, side_{side}, price_{price}, quantity_{quantity} {}
+    : orderId_{ orderId }, side_{ side }, price_{ price }, quantity_{ quantity }
+  {}
 
   OrderId getOrderId() const { return orderId_; }
-  Side getSide() const { return side_; }
   Price getPrice() const { return price_; }
+  Side getSide() const { return side_; }
   Quantity getQuantity() const { return quantity_; }
 
-  OrderPointer toOrderPointer(OrderType type) const {
-    return std::make_shared<Order>(type, getOrderId(), getSide(), getPrice(),
-                                   getQuantity());
+  OrderPointer toOrderPointer(OrderType orderType) const {
+    return std::make_shared<Order>(orderType, getOrderId(), getSide(), getPrice(), getQuantity());
   }
-
 private:
   OrderId orderId_;
-  Side side_;
   Price price_;
+  Side side_;
   Quantity quantity_;
 };
 
@@ -112,11 +117,12 @@ struct TradeInfo {
 
 class Trade {
 public:
-  Trade(const TradeInfo &bidTrade, const TradeInfo &askTrade)
-      : bidTrade_{bidTrade}, askTrade_{askTrade} {}
+  Trade(const TradeInfo& bidTrade, const TradeInfo& askTrade)
+    : bidTrade_{ bidTrade }, askTrade_{ askTrade }
+  {}
 
-  const TradeInfo &getBidTrade() const { return bidTrade_; }
-  const TradeInfo &getAskTrade() const { return askTrade_; }
+  const TradeInfo& getBidTrade() const { return bidTrade_; }
+  const TradeInfo& getAskTrade() const { return askTrade_; }
 
 private:
   TradeInfo bidTrade_;
@@ -126,11 +132,89 @@ private:
 using Trades = std::vector<Trade>;
 
 class Orderbook {
+public:
+  Trades addOrder(OrderPointer order) {
+    if (orders_.contains(order->getOrderId()))
+      return { };
+
+    if (order->getOrderType() == OrderType::FillOrKill && !canMatch(order->getSide(), order->getPrice()))
+      return { };
+
+    OrderPointers::iterator iterator;
+    
+    if (order->getSide() == Side::Buy) {
+      auto& orders = bids_[order->getPrice()];
+      orders.push_back(order);
+      iterator = std::next(orders.begin(), orders.size() - 1);
+    } else {
+      auto& orders = asks_[order->getPrice()];
+      orders.push_back(order);
+      iterator = std::next(orders.begin(), orders.size() - 1);
+    }
+
+    orders_.insert({ order->getOrderId(), OrderEntry{ order, iterator }});
+    return MatchOrders();
+  }
+
+  void cancelOrder(OrderId orderId) {
+    if (!orders_.contains(orderId))
+      return;
+
+    const auto [order, orderIterator] = orders_.at(orderId);
+    orders_.erase(orderId);
+
+    if (order->getSide() == Side::Sell) {
+      auto price = order->getPrice();
+      auto& orders = asks_.at(price); // NOTE: this might be an issue with erase of the reference
+      orders.erase(orderIterator);
+      if (orders.empty())
+        asks_.erase(price);
+    } else {
+      auto price = order->getPrice();
+      auto& orders = bids_.at(price);
+      if (orders.empty())
+        bids_.erase(price);
+    }
+  }
+
+  Trades matchOrder(OrderModify order) {
+    if (!orders_.contains(order.getOrderId()))
+      return { };
+
+    const auto& [existingOrder, _] = orders_.at(order.getOrderId());
+    cancelOrder(order.getOrderId());
+    return addOrder(order.toOrderPointer(existingOrder->getOrderType()));
+  }
+
+  std::size_t size() const { return orders_.size(); }
+
+  OrderbookLevelInfos getOrderInfos() const {
+    LevelInfos bidInfos, askInfos;
+    bidInfos.reserve(orders_.size());
+    askInfos.reserve(orders_.size());
+
+    auto createLevelInfos = [](Price price, const OrderPointers& orders){
+      return LevelInfo{ price, 
+        std::accumulate(orders.begin(), orders.end(), (Quantity)0,
+          [](std::size_t runningSum, const OrderPointer& order){
+            return runningSum + order->getRemainingQuantity();
+          }
+        )
+      };
+    };
+
+    for (const auto& [price, orders] :bids_) 
+      bidInfos.push_back(createLevelInfos(price, orders));
+
+    for (const auto& [price, orders] : asks_)
+      askInfos.push_back(createLevelInfos(price, orders));
+
+    return OrderbookLevelInfos{ bidInfos, askInfos };
+  }
 
 private:
-  // TODO: optimize the data structure and get rid of maps
   struct OrderEntry {
-    OrderPointer order_{nullptr};
+    OrderPointer order_ { nullptr };
     OrderPointers::iterator location_;
   };
 
@@ -143,41 +227,39 @@ private:
       if (asks_.empty())
         return false;
 
-      const auto &[bestAsk, _] = *asks_.begin();
+      const auto& [bestAsk, _] = *asks_.begin();
       return price >= bestAsk;
     } else {
       if (bids_.empty())
         return false;
 
-      const auto &[bestBid, _] = *bids_.begin();
+      const auto& [bestBid, _] = *bids_.begin();
       return price <= bestBid;
     }
   }
 
-  Trades matchOrders() {
+  Trades MatchOrders() {
     Trades trades;
-    trades.reserve(orders_.size()); // worst case, a trade can take all the
-                                    // orders of the orderbook
+    trades.reserve(orders_.size());
 
     while (true) {
       if (bids_.empty() || asks_.empty())
         break;
 
-      auto &[bidPrice, bids] = *bids_.begin();
-      auto &[askPrice, asks] = *asks_.begin();
+      auto& [bidPrice, bids] = *bids_.begin();
+      auto& [askPrice, asks] = *asks_.begin();
 
       if (bidPrice < askPrice)
         break;
 
       while (bids.size() && asks.size()) {
-        auto bid = bids.front();
-        auto ask = asks.front();
+        auto& bid = bids.front();
+        auto& ask = asks.front();
 
-        Quantity quantity =
-            std::min(bid->getRemainingQuantity(), ask->getRemainingQuantity());
+        Quantity quantity = std::min(bid->getRemainingQuantity(), ask->getRemainingQuantity());
 
-        bid->fill(quantity);
-        ask->fill(quantity);
+        bid->Fill(quantity);
+        ask->Fill(quantity);
 
         if (bid->isFilled()) {
           bids.pop_front();
@@ -193,123 +275,40 @@ private:
           bids_.erase(bidPrice);
 
         if (asks.empty())
-          asks_.erase(askPrice);
+          asks_.erase(bidPrice);
 
         trades.push_back(Trade{
-            TradeInfo{bid->getOrderId(), bid->getPrice(), quantity},
-            TradeInfo{ask->getOrderId(), ask->getPrice(), quantity},
+          TradeInfo{ bid->getOrderId(), bid->getPrice(), quantity },
+          TradeInfo{ ask->getOrderId(), ask->getPrice(), quantity }
         });
       }
     }
 
     if (!bids_.empty()) {
-      auto &[_, bids] = *bids_.begin();
-      auto &order = bids.front();
-      if (order->getOrderType() == OrderType::FillOrKill) {
+      auto& [_, bids] = *bids_.begin();
+      auto& order = bids.front();
+      if (order->getOrderType() == OrderType::FillOrKill)
         cancelOrder(order->getOrderId());
-      }
     }
 
     if (!asks_.empty()) {
-      auto &[_, asks] = *asks_.begin();
-      auto &order = asks.front();
-      if (order->getOrderType() == OrderType::FillOrKill) {
+      auto& [_, asks] = *asks_.begin();
+      auto& order = asks.front();
+      if (order->getOrderType() == OrderType::FillOrKill)
         cancelOrder(order->getOrderId());
-      }
     }
-
     return trades;
-  }
-
-public:
-  Trades addOrder(OrderPointer order) {
-    if (orders_.contains(order->getOrderId()))
-      return {};
-
-    if (order->getOrderType() == OrderType::FillOrKill &&
-        !canMatch(order->getSide(), order->getPrice()))
-      return {};
-
-    OrderPointers::iterator iterator;
-
-    if (order->getSide() == Side::Buy) {
-      auto &orders = bids_[order->getPrice()];
-      orders.push_back(order);
-      iterator = std::next(orders.begin(), orders.size() - 1);
-    } else {
-      auto &orders = asks_[order->getPrice()];
-      orders.push_back(order);
-      iterator = std::next(orders.begin(), orders.size() - 1);
-    }
-
-    orders_.insert({order->getOrderId(), OrderEntry{order, iterator}});
-    return matchOrders();
-  }
-
-  void cancelOrder(OrderId orderId) {
-    if (!orders_.contains(orderId))
-      return;
-
-    const auto [order, iterator] = orders_.at(orderId);
-    orders_.erase(orderId);
-
-    if (order->getSide() == Side::Sell) {
-      auto price = order->getPrice();
-      auto &orders = asks_.at(price);
-      orders.erase(iterator);
-      if (orders.empty())
-        asks_.erase(price);
-    } else {
-      auto price = order->getPrice();
-      auto &orders = bids_.at(price);
-      orders.erase(iterator);
-      if (orders.empty())
-        bids_.erase(price);
-    }
-  }
-
-  Trades matchOrder(OrderModify order) {
-    if (!orders_.contains(order.getOrderId()))
-      return {};
-
-    const auto &[existingOrder, _] = orders_.at(order.getOrderId());
-    cancelOrder(order.getOrderId());
-    return addOrder(order.toOrderPointer(existingOrder->getOrderType()));
-  }
-
-  std::size_t size() const { return orders_.size(); }
-
-  OrderBookLevelInfos getOrderInfos() const {
-    LevelInfos bidInfos, askInfos;
-    bidInfos.reserve(orders_.size());
-    askInfos.reserve(orders_.size());
-
-    auto createLevelInfos = [](Price price, const OrderPointers &orders) {
-      return LevelInfo{
-          price,
-          std::accumulate(orders.begin(), orders.end(), (Quantity)0,
-                          [](Quantity runningSum, const OrderPointer &order) {
-                            return runningSum + order->getRemainingQuantity();
-                          })};
-    };
-
-    for (const auto &[price, orders] : bids_)
-      bidInfos.push_back(createLevelInfos(price, orders));
-
-    for (const auto &[price, orders] : asks_)
-      askInfos.push_back(createLevelInfos(price, orders));
-
-    return OrderBookLevelInfos{bidInfos, askInfos};
   }
 };
 
 int main() {
+  
   Orderbook orderbook;
   const OrderId orderId = 1;
-  orderbook.addOrder(std::make_shared<Order>(OrderType::GoodTillCancel, orderId,
-                                             Side::Buy, 100, 10));
+  orderbook.addOrder(std::make_shared<Order>(OrderType::GoodTillCancel, orderId, Side::Buy, 100, 100));
   std::cout << "Orderbook size after adding order: " << orderbook.size() << std::endl;
   orderbook.cancelOrder(orderId);
   std::cout << "Orderbook size after canceling order: " << orderbook.size() << std::endl;
+
   return 0;
 }
