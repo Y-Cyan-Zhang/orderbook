@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 enum class OrderType {
   GoodTillCancel,
   FillOrKill,
@@ -14,5 +16,6 @@ enum class Side {
 
 class Order {
 public:
+  Order(OrderType orderType, uint32_t orderId, Side side, float price, float quantity);
 private:
 };
