@@ -6,8 +6,10 @@
 #include <list>
 #include <map>
 #include <unordered_map>
+#include "include/types.hpp"
 
 
+namespace orderbook {
 enum class OrderType {
   GoodTillCancel,
   FillOrKill
@@ -300,12 +302,13 @@ private:
     return trades;
   }
 };
+}
 
 int main() {
   
-  Orderbook orderbook;
-  const OrderId orderId = 1;
-  orderbook.addOrder(std::make_shared<Order>(OrderType::GoodTillCancel, orderId, Side::Buy, 100, 100));
+  orderbook::Orderbook orderbook;
+  const orderbook::OrderId orderId = 1;
+  orderbook.addOrder(std::make_shared<orderbook::Order>(orderbook::OrderType::GoodTillCancel, orderId, orderbook::Side::Buy, 100, 100));
   std::cout << "Orderbook size after adding order: " << orderbook.size() << std::endl;
   orderbook.cancelOrder(orderId);
   std::cout << "Orderbook size after canceling order: " << orderbook.size() << std::endl;
