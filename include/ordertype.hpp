@@ -2,8 +2,6 @@
 
 #include <cstdint>
 
-namespace orderbook {
-
 enum class OrderType {
   GoodTillCancel,
   FillOrKill,
@@ -21,5 +19,3 @@ public:
   Order(OrderType orderType, uint32_t orderId, Side side, float price, float quantity);
 private:
 };
-
-}
