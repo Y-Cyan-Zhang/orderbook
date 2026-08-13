@@ -10,15 +10,6 @@
 
 
 namespace orderbook {
-enum class OrderType {
-  GoodTillCancel,
-  FillOrKill
-};
-
-enum class Side {
-  Buy,
-  Sell
-};
 
 using Price = std::int32_t;
 using Quantity = std::int32_t;
