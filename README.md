@@ -8,7 +8,6 @@ TODO: replace header files with modules
 #### Order Book Levels Interface
 
 
-
 #### Order Object Interface
 Base fields:
   - market ticker
