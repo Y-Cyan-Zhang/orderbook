@@ -12,8 +12,6 @@ struct LevelInfo {
 
 using LevelInfos = std::vector<LevelInfo>;
 
-
-
 class OrderbookLevelInfos {
 public:
   OrderbookLevelInfos(const LevelInfos& bids, const LevelInfos& asks)
