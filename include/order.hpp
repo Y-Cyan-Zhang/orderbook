@@ -21,14 +21,7 @@ public:
   Quantity getRemainingQuantity() const { return remainingQuantity_; }
   Quantity getFilledQuantity() const { return getInitialQuantity() - getRemainingQuantity(); }
   bool isFilled() const { return getRemainingQuantity() == 0; }
-  void Fill(Quantity quantity) {
-    if (quantity > getRemainingQuantity())
-      throw std::logic_error(
-        std::format("Order ({}) cannot be filled for more than its remaining quantity.", getOrderId())
-      );
-
-    remainingQuantity_ -= quantity;
-  }
+  void fill(Quantity quantity);
 
 private:
   OrderType orderType_;
@@ -38,5 +31,13 @@ private:
   Quantity initialQuantity_;
   Quantity remainingQuantity_;
 };
+
+/* Using shared_ptr to allow reference semnatics.
+ * Need reference semantics since Order objects can be stored in
+ */
+using OrderPointer = std::shared_ptr<Order>; // using for reference semantics
+                                             // Order objects can be stored in
+                                             // Order objects can be stored in
+                                             // Order objects can be stored in
 
 }
