@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "order.hpp"
 #include "types.hpp"
 
 namespace orderbook {
