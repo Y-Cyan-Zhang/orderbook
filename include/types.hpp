@@ -19,4 +19,16 @@ enum class Side {
   Sell,
 };
 
+enum class OrderType {
+  GoodTillCancel,
+  FillOrKill,
+  ImmediateOrCancel,
+};
+
+enum class Side {
+  Buy,
+  Sell
+};
+
+
 }
