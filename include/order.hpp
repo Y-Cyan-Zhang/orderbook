@@ -1,7 +1,6 @@
 #pragma once
 
-#include <stdexcept>
-#include <format>
+#include <list>
 #include "types.hpp"
 
 namespace orderbook {
@@ -34,10 +33,14 @@ private:
 
 /* Using shared_ptr to allow reference semnatics.
  * Need reference semantics since Order objects can be stored in
+ * multiple data structures (e.g Order dicts, bid/ask dicts)
  */
-using OrderPointer = std::shared_ptr<Order>; // using for reference semantics
-                                             // Order objects can be stored in
-                                             // Order objects can be stored in
-                                             // Order objects can be stored in
+using OrderPointer = std::shared_ptr<Order>;
+
+/* Using std::list since list iterators don't get invalidated
+ * as you insert/remove elements, and we'll be inserting/removing a lot.
+ * TODO: optimize with more fficient data structure
+ */
+using OrderPointers = std::list<OrderPointer>;
 
 }

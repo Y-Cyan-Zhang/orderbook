@@ -11,15 +11,6 @@
 namespace orderbook {
 
 
-using OrderPointer = std::shared_ptr<Order>;  // using to allow reference semantics, 
-                                              // since on Order object can be stored in multiple data strcutures
-                                              // (e.g. in Orders dict, and bid/ask dict)
-
-using OrderPointers = std::list<OrderPointer>; // using a std::list since list iterators don't get invalidated as you insert/remove
-                                               // will be inserting/removing a lot
-                                               // TODO: can optimize this with a more efficient data structure, e.g. maybe a vector, more cache friendly
-
-
 struct TradeInfo {
   OrderId orderId_;
   Price price_;
