@@ -11,11 +11,6 @@
 namespace orderbook {
 
 
-struct TradeInfo {
-  OrderId orderId_;
-  Price price_;
-  Quantity quantity_;
-};
 
 class Trade {
 public:
